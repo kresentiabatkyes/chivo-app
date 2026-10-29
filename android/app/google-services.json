@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "219067773704",
+    "project_id": "chivo-996da",
+    "storage_bucket": "chivo-996da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:219067773704:android:df2893949271ae196332bd",
+        "android_client_info": {
+          "package_name": "com.example.chivo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZWGtAjq5T3NcDMiZk_u8nWFFL5uqD0qU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
