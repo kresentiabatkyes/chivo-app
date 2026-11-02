@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
-import '../utils/app_colors.dart';
 import 'main_page.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,161 +11,164 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
-  bool obscurePassword = true;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
-  @override
-  void dispose() {
-    usernameController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
+  Future<void> _login() async {
+    String inputEmail = _emailController.text.trim();
+    String inputPassword = _passwordController.text.trim();
 
-  Future<void> submitLogin() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    String inputUser = usernameController.text.trim();
-    String inputPass = passwordController.text.trim();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    bool loginBerhasil = false;
-    String pesanError = '';
-
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://chivo-996da-default-rtdb.asia-southeast1.firebasedatabase.app',
+    if (inputEmail.isEmpty || inputPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email dan Password tidak boleh kosong!"), backgroundColor: Colors.orange),
       );
-
-      DatabaseReference ref = database.ref().child('peternak');
-
-      DataSnapshot snapshot = await ref.get().timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw Exception("Koneksi ke Firebase timeout. Periksa koneksi internet."),
-      );
-
-      if (snapshot.exists && snapshot.value != null) {
-        Object? rawData = snapshot.value;
-
-        if (rawData is Map) {
-          rawData.forEach((key, value) {
-            if (value is Map) {
-              String dbUser = (value['username'] ?? '').toString().trim();
-              String dbEmail = (value['email'] ?? '').toString().trim();
-              String dbPass = (value['password'] ?? '').toString().trim();
-
-              if ((dbUser.toLowerCase() == inputUser.toLowerCase() || 
-                   dbEmail.toLowerCase() == inputUser.toLowerCase()) &&
-                  dbPass == inputPass) {
-                loginBerhasil = true;
-              }
-            }
-          });
-        }
-      } else {
-        pesanError = "Node 'peternak' tidak ditemukan di database.";
-      }
-    } catch (e) {
-      pesanError = e.toString();
-    } finally {
-      if (mounted) Navigator.pop(context);
+      return;
     }
 
-    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    if (loginBerhasil) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MainPage(loggedInUsername: inputUser),
-        ),
-      );
-    } else {
+    try {
+      // Koneksi ke Firebase Realtime Database region asia-southeast1
+      DatabaseReference peternakRef = FirebaseDatabase.instanceFor(
+        app: FirebaseDatabase.instance.app,
+        databaseURL: 'https://chivo-996da-default-rtdb.asia-southeast1.firebasedatabase.app',
+      ).ref('peternak');
+
+      Query query = peternakRef.orderByChild('email').equalTo(inputEmail);
+      DataSnapshot snapshot = await query.get().timeout(const Duration(seconds: 5));
+
+      bool isLoginSuccess = false;
+      String fetchedEmail = inputEmail;
+      String fetchedNama = "Peternak CHIVO";
+
+      if (snapshot.exists && snapshot.value != null) {
+        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+
+        data.forEach((key, value) {
+          if (value is Map) {
+            String dbPassword = value['password']?.toString() ?? '';
+            if (dbPassword == inputPassword) {
+              isLoginSuccess = true;
+              fetchedEmail = value['email']?.toString() ?? inputEmail;
+              fetchedNama = value['nama']?.toString() ?? 'Peternak CHIVO';
+            }
+          }
+        });
+      }
+
+      if (!mounted) return;
+
+      if (isLoginSuccess) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MainPage(
+              userEmail: fetchedEmail,
+              userName: fetchedNama,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Email atau Password salah!"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(pesanError.isNotEmpty ? pesanError : 'Login Gagal: Username/Email atau Password salah!'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text("Gagal masuk (Periksa Koneksi): $e"), backgroundColor: Colors.red),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9FAF7),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Center(
-                    child: Text(
-                      'CHIVO',
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 1.2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/chivoo.jpg',
+                  height: 130,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.pets, size: 90, color: Color(0xFF2E7D32));
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "Sistem Klasifikasi Perilaku Aktif-Pasif Anak Ayam",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black26)),
+                  child: TextField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      hintText: 'Email',
+                      prefixIcon: Icon(Icons.mail_outline, color: Color(0xFF2E7D32)),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Selamat Datang di CHIVO',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Pantau kenyamanan kandang anak ayam\nsecara real-time.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 36),
-                  TextFormField(
-                    controller: usernameController,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black26)),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'Masukkan email atau username',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    validator: (val) => val == null || val.isEmpty ? 'Field tidak boleh kosong' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: passwordController,
-                    obscureText: obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Masukkan kata sandi',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      hintText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF2E7D32)),
                       suffixIcon: IconButton(
-                        icon: Icon(obscurePassword ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                        icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.black45),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
-                    validator: (val) => val == null || val.isEmpty ? 'Password tidak boleh kosong' : null,
                   ),
-                  const SizedBox(height: 28),
-                  ElevatedButton(
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
                     ),
-                    onPressed: submitLogin,
-                    child: const Text('Masuk →', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                    onPressed: _isLoading ? null : _login,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("MASUK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Belum punya akun? ", style: TextStyle(color: Colors.black54, fontSize: 13)),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterPage())),
+                      child: const Text("Daftar Sekarang", style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
