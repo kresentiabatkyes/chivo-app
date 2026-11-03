@@ -4,10 +4,7 @@ import 'pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inisialisasi standar yang otomatis membaca konfigurasi google-services.json
   await Firebase.initializeApp();
-
   runApp(const ChivoApp());
 }
 
@@ -16,10 +13,14 @@ class ChivoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return MaterialApp(
       title: 'CHIVO App',
-      home: LoginPage(),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: const Color(0xFFF9FAF7),
+      ),
+      home: const LoginPage(),
     );
   }
 }

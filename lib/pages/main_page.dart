@@ -18,13 +18,11 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
 
-  // Inisialisasi Database dengan URL Region asia-southeast1
   final DatabaseReference _sensorRef = FirebaseDatabase.instanceFor(
     app: FirebaseDatabase.instance.app,
     databaseURL: 'https://chivo-996da-default-rtdb.asia-southeast1.firebasedatabase.app',
   ).ref('sensor_data');
 
-  // Fungsi untuk menampilkan pop-up konfirmasi keluar
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -42,7 +40,7 @@ class _MainPageState extends State<MainPage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Tutup pop-up (Batal)
+                Navigator.pop(context); 
               },
               child: const Text(
                 "Tidak",
@@ -55,8 +53,8 @@ class _MainPageState extends State<MainPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
-                Navigator.pop(context); // Tutup pop-up
-                // Keluar dan kembali ke halaman awal/login
+                Navigator.pop(context); 
+                
                 Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
               },
               child: const Text(
@@ -115,8 +113,8 @@ class _MainPageState extends State<MainPage> {
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Keluar', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
               onTap: () {
-                Navigator.pop(context); // Tutup drawer terlebih dahulu
-                _showLogoutDialog(context); // Tampilkan pop-up konfirmasi
+                Navigator.pop(context); 
+                _showLogoutDialog(context); 
               },
             ),
           ],
@@ -170,7 +168,7 @@ class _MainPageState extends State<MainPage> {
               SingleChildScrollView(
                 child: Column(
                   children: [
-                    // Kotak Live Stream Video dengan Badge LIVE di Pojok Kiri Atas
+                    // Kotak Live Stream Video
                     Container(
                       width: double.infinity,
                       height: 220,
@@ -257,7 +255,7 @@ class _MainPageState extends State<MainPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Card Statistik Ayam (Total, Aktif, Pasif dari Database)
+                    
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Container(

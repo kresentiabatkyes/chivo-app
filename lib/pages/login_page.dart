@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main_page.dart';
-import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,72 +16,110 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  Future<void> _login() async {
+  final DatabaseReference _peternakRef = FirebaseDatabase.instanceFor(
+    app: FirebaseDatabase.instance.app,
+    databaseURL: 'https://chivo-996da-default-rtdb.asia-southeast1.firebasedatabase.app',
+  ).ref('peternak');
+
+  void _loginUser() async {
     String inputEmail = _emailController.text.trim();
     String inputPassword = _passwordController.text.trim();
 
     if (inputEmail.isEmpty || inputPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email dan Password tidak boleh kosong!"), backgroundColor: Colors.orange),
+        const SnackBar(content: Text("Email dan Password harus diisi dengan lengkap!")),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      // Koneksi ke Firebase Realtime Database region asia-southeast1
-      DatabaseReference peternakRef = FirebaseDatabase.instanceFor(
-        app: FirebaseDatabase.instance.app,
-        databaseURL: 'https://chivo-996da-default-rtdb.asia-southeast1.firebasedatabase.app',
-      ).ref('peternak');
+      
+      DataSnapshot snapshot = await _peternakRef
+          .get()
+          .timeout(const Duration(seconds: 10));
 
-      Query query = peternakRef.orderByChild('email').equalTo(inputEmail);
-      DataSnapshot snapshot = await query.get().timeout(const Duration(seconds: 5));
-
-      bool isLoginSuccess = false;
-      String fetchedEmail = inputEmail;
-      String fetchedNama = "Peternak CHIVO";
+      if (!mounted) return;
 
       if (snapshot.exists && snapshot.value != null) {
-        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        final Map<dynamic, dynamic> peternakMap = snapshot.value as Map<dynamic, dynamic>;
+        
+        bool isLoginSuccess = false;
+        String loggedInName = "Peternak CHIVO";
 
-        data.forEach((key, value) {
+        
+        peternakMap.forEach((key, value) {
           if (value is Map) {
+            String dbEmail = value['email']?.toString() ?? '';
             String dbPassword = value['password']?.toString() ?? '';
-            if (dbPassword == inputPassword) {
+            String dbName = value['nama']?.toString() ?? 'Peternak CHIVO';
+
+            if (dbEmail.toLowerCase() == inputEmail.toLowerCase() && dbPassword == inputPassword) {
               isLoginSuccess = true;
-              fetchedEmail = value['email']?.toString() ?? inputEmail;
-              fetchedNama = value['nama']?.toString() ?? 'Peternak CHIVO';
+              loggedInName = dbName;
             }
           }
         });
-      }
 
-      if (!mounted) return;
-
-      if (isLoginSuccess) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainPage(
-              userEmail: fetchedEmail,
-              userName: fetchedNama,
+        if (isLoginSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Login Berhasil!"),
+              backgroundColor: Colors.green,
             ),
-          ),
-        );
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainPage(
+                userEmail: inputEmail,
+                userName: loggedInName,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Email atau Password salah!"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Email atau Password salah!"), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text("Tidak ada data peternak di database!"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
+    } on TimeoutException catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Koneksi Timeout: Server Firebase tidak merespons dalam 10 detik!"),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal masuk (Periksa Koneksi): $e"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text("Terjadi kesalahan: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -90,85 +128,117 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAF7),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/chivoo.jpg',
-                  height: 130,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.pets, size: 90, color: Color(0xFF2E7D32));
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  "Sistem Klasifikasi Perilaku Aktif-Pasif Anak Ayam",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 32),
-                Container(
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black26)),
-                  child: TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      hintText: 'Email',
-                      prefixIcon: Icon(Icons.mail_outline, color: Color(0xFF2E7D32)),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/images/chivoo.jpg',
+                      width: 125,
+                      height: 125,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.pets, size: 80, color: Color(0xFF2E7D32));
+                      },
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black26)),
-                  child: TextField(
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Sistem Klasifikasi Perilaku Aktif-Pasif Anak Ayam",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black54,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 36),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: "Email",
+                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF2E7D32)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      hintText: 'Password',
+                      hintText: "Password",
                       prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF2E7D32)),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.black45),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          color: Colors.black45,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
-                ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: _isLoading ? null : _loginUser,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              "MASUK",
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
                     ),
-                    onPressed: _isLoading ? null : _login,
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("MASUK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Belum punya akun? ", style: TextStyle(color: Colors.black54, fontSize: 13)),
-                    GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterPage())),
-                      child: const Text("Daftar Sekarang", style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
