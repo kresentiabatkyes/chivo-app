@@ -6,7 +6,7 @@ class DashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Hubungkan ke koleksi dan dokumen database Firebase
+    
     final Stream<DocumentSnapshot> kandangStream = FirebaseFirestore.instance
         .collection('kandang')
         .doc('kandang_a')
@@ -36,7 +36,7 @@ class DashboardTab extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // Kotak Video Live Stream
+              
               Container(
                 height: 200,
                 width: double.infinity,
@@ -73,7 +73,6 @@ class DashboardTab extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Real-time Status Card
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -110,7 +109,7 @@ class DashboardTab extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Kotak Statistik Ayam
+              // Statistik Ayam
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -9,7 +9,6 @@ class UserModel {
     required this.email,
   });
 
-  // Factory constructor untuk mengubah data dari Firebase Firestore (DocumentSnapshot) menjadi objek UserModel
   factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
     return UserModel(
       uid: documentId,
@@ -18,7 +17,6 @@ class UserModel {
     );
   }
 
-  // Mengubah objek UserModel kembali ke bentuk Map (biasanya untuk disimpan ke Firestore)
   Map<String, dynamic> toMap() {
     return {
       'name': name,

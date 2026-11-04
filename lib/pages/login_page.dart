@@ -24,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   ).ref('peternak');
 
   void _loginUser() async {
-    // Validasi lokal lewat validators.dart (kolom kosong / format salah)
+    
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         } else {
-          // Dialog pop-up jika email atau password salah di database
+          
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
